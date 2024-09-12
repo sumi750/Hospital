@@ -4,6 +4,18 @@ const Customer = require("../models/customer.js");
 const bcrypt = require("bcryptjs");
 const {generateToken, jwtAuth} = require("./../models/jwt.js");
 const jwt = require("jsonwebtoken");
+const blacklist = [];
+
+//Middle Ware
+
+router.use((req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token && blacklist.includes(token)) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    next();
+});
+
 
 //SignUp
 router.post("/signup", async(req,res)=>{
@@ -37,7 +49,19 @@ router.post("/signup", async(req,res)=>{
         }
 
         const token = generateToken(payload);
-        res.cookie('jwt', token, { httpOnly: true, secure: true });
+
+        // let oldTokens = newCustomer.tokens || []
+
+        // if(oldTokens.length){
+        //     oldTokens = oldTokens.filter(t=>{
+        //         const timeDiff = (Date.now() - parseInt(t.signedAt)) / 1000;
+        //         if(timeDiff < 86400){
+        //             return t;
+        //         }
+        //     })
+        // }
+
+        // await Customer.findByIdAndUpdate(newCustomer._id, {tokens: [...oldTokens, {token, signedAt: Date.now().toString()}]});
         res.status(201).json({message: "Customer Created Seccuessfully", customerId, token : token});
 
     }
@@ -62,7 +86,20 @@ router.post("/login", async (req,res)=>{
         }
 
         const token = generateToken(payload);
-        res.cookie('jwt', token, { httpOnly: true, secure: true });
+
+        // let oldTokens = customer.tokens || []
+
+        // if(oldTokens.length){
+        //     oldTokens = oldTokens.filter(t=>{
+        //         const timeDiff = (Date.now() - parseInt(t.signedAt)) / 1000;
+        //         if(timeDiff < 86400){
+        //             return t;
+        //         }
+        //     })
+        // }
+
+        // await Customer.findByIdAndUpdate(customer._id, {tokens: [...oldTokens, {token, signedAt: Date.now().toString()}]});
+
         //compare passwords
 
         const isMatch = await bcrypt.compare(password, customer.password);
@@ -76,5 +113,27 @@ router.post("/login", async (req,res)=>{
         res.status(500).json({message: "Server Error"});
     }
 });
+
+
+//LogOut Api
+router.post("/logout", async(req,res)=>{
+    try{
+
+    
+       const token =  req.headers.authorization.split(' ')[1];
+        if(!token){
+            return res.status(401).json({success : false, message: "Authorzation fails"});
+        }
+
+        if(token){
+            blacklist.push(token);
+        }
+        
+        res.json({message : "Sign Out "});
+    }
+    catch(err){
+        res.status(500).json("Error")
+    }
+})
 
 module.exports = router;
